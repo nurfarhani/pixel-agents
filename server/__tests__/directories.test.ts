@@ -7,6 +7,7 @@ import { readConfig } from '../src/configPersistence.js';
 import {
   buildDirectoryUnion,
   directoryAt,
+  directoryOfSession,
   expandTilde,
   handleDirectoryClientMessage,
   listDirectories,
@@ -378,6 +379,34 @@ describe('directories', () => {
 
     it('is undefined for a path that is no Directory, so the host keeps its own label', () => {
       expect(directoryAt(alpha, [{ name: 'beta', path: beta }])?.name).toBeUndefined();
+    });
+  });
+  // ── adopted sessions ─────────────────────────────────────────
+
+  describe('directoryOfSession', () => {
+    /** Claude's rule in miniature: one session folder per path, under HOME. */
+    const sessionDirsOf = (directoryPath: string) => [
+      path.join(tempHome, 'projects', directoryPath.replace(/[^a-zA-Z0-9-]/g, '-')),
+    ];
+
+    it("finds the Directory at the session's cwd, default characters included", () => {
+      saveUserDirectory({ name: 'Mine', path: alpha, characters: [3] });
+      expect(directoryOfSession({ cwd: alpha }, sessionDirsOf)).toMatchObject({
+        name: 'Mine',
+        characters: [3],
+      });
+    });
+
+    it('finds it by the folder the CLI files its sessions under when no cwd came', () => {
+      saveUserDirectory({ name: 'Mine', path: alpha });
+      const [projectDir] = sessionDirsOf(alpha);
+      expect(directoryOfSession({ projectDir }, sessionDirsOf)?.name).toBe('Mine');
+    });
+
+    it('is undefined for a session outside every Directory', () => {
+      saveUserDirectory({ name: 'Mine', path: alpha });
+      const [projectDir] = sessionDirsOf(beta);
+      expect(directoryOfSession({ cwd: beta, projectDir }, sessionDirsOf)).toBeUndefined();
     });
   });
 });

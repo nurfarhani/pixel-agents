@@ -25,7 +25,7 @@ import {
   isSubagentToolName,
   setProviderCapabilities,
 } from '../office/toolUtils.js';
-import type { OfficeLayout, ToolActivity } from '../office/types.js';
+import type { OfficeLayout, SubagentCharacter, ToolActivity } from '../office/types.js';
 import { setWallSprites } from '../office/wallTiles.js';
 import { isBrowserRuntime, isE2E } from '../runtime.js';
 import { transport } from '../transport/index.js';
@@ -43,12 +43,7 @@ import { handleUsageMessage } from '../usage/usageStore.js';
 const isHeadlessAgent = (isExternal: boolean | undefined): boolean =>
   isExternal === true && !isBrowserRuntime;
 
-export interface SubagentCharacter {
-  id: number;
-  parentAgentId: number;
-  parentToolId: string;
-  label: string;
-}
+export type { SubagentCharacter };
 
 interface FurnitureAsset {
   id: string;
@@ -520,7 +515,13 @@ export function useExtensionMessages(
             ...prev,
             [id]: [
               ...list,
-              { toolId, status, done: false, permissionWait: permissionActive || false },
+              {
+                toolId,
+                status,
+                done: false,
+                permissionWait: permissionActive || false,
+                startedAt: Date.now(),
+              },
             ],
           };
         });
@@ -683,7 +684,10 @@ export function useExtensionMessages(
           if (list.some((t) => t.toolId === toolId)) return prev;
           return {
             ...prev,
-            [id]: { ...agentSubs, [parentToolId]: [...list, { toolId, status, done: false }] },
+            [id]: {
+              ...agentSubs,
+              [parentToolId]: [...list, { toolId, status, done: false, startedAt: Date.now() }],
+            },
           };
         });
         // Update sub-agent character's tool and active state. The sub-agent is

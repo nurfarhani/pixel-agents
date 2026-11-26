@@ -238,20 +238,18 @@ describe('paletteAssigner', () => {
       expect(agent.repeat).toBe(0);
     });
 
-    it('falls back to a random free character when every priority default is worn', () => {
+    it("wears the project's character again, as its next repeat, when every default is worn", () => {
       store.set(100, createTestAgent({ id: 100, palette: 4, repeat: 0 }));
       const agent = createTestAgent({ id: 1 });
       assignPaletteIfNeeded(agent, store, { directory: dir([4]) });
-      expect(agent.palette).not.toBe(4);
-      expect(agent.repeat).toBe(0);
+      expect(agent).toMatchObject({ palette: 4, repeat: 1 });
     });
 
-    it('random order never repeats a default already in the office', () => {
+    it('random order repeats a default too, rather than a stranger', () => {
       store.set(100, createTestAgent({ id: 100, palette: 4, repeat: 0 }));
       const agent = createTestAgent({ id: 1 });
       assignPaletteIfNeeded(agent, store, { directory: dir([4], 'random') });
-      expect(agent.palette).not.toBe(4);
-      expect(agent.repeat).toBe(0);
+      expect(agent).toMatchObject({ palette: 4, repeat: 1 });
     });
 
     it('wears a roster pick already in the office as its next repeat', () => {

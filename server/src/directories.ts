@@ -208,6 +208,35 @@ export function directoryAt(
   );
 }
 
+/**
+ * The saved Directory a session the office adopted (rather than launched) runs
+ * in, default characters included: the one at its `cwd`, else the one whose
+ * sessions the CLI files under its `projectDir` (`sessionDirsOf`, the
+ * provider's rule — Claude's folder name is a lossy hash of the path, so it is
+ * matched forwards from each Directory, never decoded). Only the user's saved
+ * Directories: the host's own carry no default characters and VS Code names
+ * those itself (fileWatcher's DirectoryNameResolver).
+ *
+ * This is what lets an agent started outside the office still wear its
+ * project's name and default character, like one launched into it.
+ */
+export function directoryOfSession(
+  session: { cwd?: string; projectDir?: string },
+  sessionDirsOf: (directoryPath: string) => string[],
+): Directory | undefined {
+  const directories = readConfig().directories.map(userDirectory);
+  if (session.cwd) {
+    const key = normalizeDirectoryPath(session.cwd);
+    const atCwd = directories.find((directory) => normalizeDirectoryPath(directory.path) === key);
+    if (atCwd) return atCwd;
+  }
+  if (!session.projectDir) return undefined;
+  const key = normalizeDirectoryPath(session.projectDir);
+  return directories.find((directory) =>
+    sessionDirsOf(directory.path).some((dir) => normalizeDirectoryPath(dir) === key),
+  );
+}
+
 /** What a host must supply to dispatch the Directory client messages. */
 export interface DirectoryMessageDeps {
   /** This host's own contributions, read at dispatch time. */

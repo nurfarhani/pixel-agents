@@ -22,6 +22,7 @@ import { DismissalTracker } from './dismissalTracker.js';
 import {
   adoptExternalSessionFromHook,
   ensureProjectScan,
+  followSavedDirectory,
   isTrackedProjectDir,
   reassignAgentToFile,
   scanForBackgroundAgentFiles,
@@ -547,6 +548,7 @@ export class AgentRuntime {
 
       const agent = createAgentState({ ...restoredAgentInit(p), isExternal: true });
 
+      followSavedDirectory(agent, this.store);
       assignPaletteIfNeeded(agent, this.store);
       this.store.set(p.id, agent);
       this.knownJsonlFiles.add(p.jsonlFile);

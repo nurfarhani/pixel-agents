@@ -39,31 +39,39 @@ describe('parseCharacterOrder', () => {
 });
 
 describe('pickDirectoryCharacter', () => {
-  const none = new Set<number>();
+  const none = new Map<number, number>();
+  /** palette → copies in the office */
+  const worn = (entries: Record<number, number>) =>
+    new Map(Object.entries(entries).map(([palette, n]) => [Number(palette), n]));
 
   it('priority: the first default nobody wears', () => {
     expect(pickDirectoryCharacter([3, 1, 2], 'priority', 6, none)).toBe(3);
-    expect(pickDirectoryCharacter([3, 1, 2], 'priority', 6, new Set([3]))).toBe(1);
+    expect(pickDirectoryCharacter([3, 1, 2], 'priority', 6, worn({ 3: 1 }))).toBe(1);
   });
 
-  it('priority: undefined when every default is worn (the server picks at random)', () => {
-    expect(pickDirectoryCharacter([3, 1], 'priority', 6, new Set([1, 3]))).toBeUndefined();
+  it("priority: every default worn → the project's character again, the first of the least worn", () => {
+    expect(pickDirectoryCharacter([3, 1], 'priority', 6, worn({ 1: 1, 3: 1 }))).toBe(3);
+    expect(pickDirectoryCharacter([3, 1], 'priority', 6, worn({ 3: 2, 1: 1 }))).toBe(1);
+    expect(pickDirectoryCharacter([3], 'priority', 6, worn({ 3: 4 }))).toBe(3);
   });
 
   it('random: among the defaults nobody wears', () => {
-    const worn = new Set([3]);
-    expect(pickDirectoryCharacter([3, 1, 2], 'random', 6, worn, () => 0)).toBe(1);
-    expect(pickDirectoryCharacter([3, 1, 2], 'random', 6, worn, () => 0.99)).toBe(2);
+    const three = worn({ 3: 1 });
+    expect(pickDirectoryCharacter([3, 1, 2], 'random', 6, three, () => 0)).toBe(1);
+    expect(pickDirectoryCharacter([3, 1, 2], 'random', 6, three, () => 0.99)).toBe(2);
   });
 
-  it('random: undefined when every default is worn, never a repeat', () => {
-    const worn = new Set([1, 3]);
-    expect(pickDirectoryCharacter([3, 1], 'random', 6, worn, () => 0.99)).toBeUndefined();
+  it('random: every default worn → a random one of the least worn', () => {
+    const both = worn({ 1: 1, 3: 1 });
+    expect(pickDirectoryCharacter([3, 1], 'random', 6, both, () => 0)).toBe(3);
+    expect(pickDirectoryCharacter([3, 1], 'random', 6, both, () => 0.99)).toBe(1);
+    expect(pickDirectoryCharacter([3, 1], 'random', 6, worn({ 3: 1, 1: 2 }), () => 0.99)).toBe(3);
   });
 
   it('skips defaults past the cast', () => {
     expect(pickDirectoryCharacter([9, 2], 'priority', 6, none)).toBe(2);
     expect(pickDirectoryCharacter([9], 'random', 6, none)).toBeUndefined();
+    expect(pickDirectoryCharacter([9], 'priority', 6, worn({ 9: 1 }))).toBeUndefined();
   });
 
   it('is undefined with no defaults', () => {
@@ -153,11 +161,33 @@ describe('chooseLook', () => {
     });
   });
 
-  it('falls back to a random free character when every default is worn', () => {
+  it("wears the project's character again when every default is worn, as its next repeat", () => {
+    const project = { characters: [3] };
+    expect(
+      chooseLook({ paletteCount: 6, worn: [{ palette: 3, repeat: 0 }], directory: project }),
+    ).toEqual({ palette: 3, repeat: 1 });
+    const twoCopies = [
+      { palette: 3, repeat: 0 },
+      { palette: 3, repeat: 1 },
+    ];
+    expect(chooseLook({ paletteCount: 6, worn: twoCopies, directory: project })).toEqual({
+      palette: 3,
+      repeat: 2,
+    });
+  });
+
+  it('spreads the copies over several defaults', () => {
+    expect(chooseLook({ paletteCount: 6, worn: wearing(1, 3), directory })).toEqual({
+      palette: 3,
+      repeat: 1,
+    });
+  });
+
+  it('falls back to a random free character only when no default is left in the cast', () => {
     const look = chooseLook({
       paletteCount: 6,
       worn: wearing(1, 3),
-      directory,
+      directory: { characters: [9] },
       random: () => 0,
     });
     expect(look).toEqual({ palette: 0, repeat: 0 });

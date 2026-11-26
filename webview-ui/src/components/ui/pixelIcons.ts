@@ -175,6 +175,17 @@ export const ICONS = {
     '########',
     '########',
   ],
+  // A project (Directory): the activity sidebar's project line.
+  folder: [
+    '........',
+    '###.....',
+    '#..#####',
+    '#......#',
+    '#......#',
+    '#......#',
+    '########',
+    '........',
+  ],
   // The phone's view toggle. Both fill the whole 8×8, like menu, so a
   // square button centres them exactly.
   terminal: [

@@ -7,6 +7,7 @@ import type { StateAdapter } from '../../core/src/adapter.js';
 import type { PersistedAgent } from '../../core/src/schemas.js';
 import { AgentRuntime } from '../src/agentRuntime.js';
 import { AgentStateStore } from '../src/agentStateStore.js';
+import { removeUserDirectory, saveUserDirectory } from '../src/directories.js';
 import { claudeProvider } from '../src/providers/hook/claude/claude.js';
 
 function createMockAdapter(initial: PersistedAgent[] = []): StateAdapter & {
@@ -98,5 +99,31 @@ describe('AgentRuntime -- restore reads the legacy folderName', () => {
     const written = adapter.saved.at(-1)?.find((p) => p.id === 7);
     expect(written?.directoryName).toBe('Pixel Agents');
     expect(written).not.toHaveProperty('folderName');
+  });
+
+  it('an adopted agent in a saved Directory takes its name and default character', () => {
+    const project = path.join(tmpDir, 'proj');
+    fs.mkdirSync(project);
+    saveUserDirectory({ name: 'Proj', path: project, characters: [3] });
+    try {
+      const [projectDir] = claudeProvider.getSessionDirs!(project);
+      const { store } = restore({ directoryName: 'proj', palette: 5, repeat: 0, projectDir });
+      expect(store.get(7)).toMatchObject({ directoryName: 'Proj', palette: 3 });
+    } finally {
+      removeUserDirectory(project);
+    }
+  });
+
+  it("keeps the look of an agent already wearing one of its Directory's defaults", () => {
+    const project = path.join(tmpDir, 'proj');
+    fs.mkdirSync(project);
+    saveUserDirectory({ name: 'Proj', path: project, characters: [3, 4] });
+    try {
+      const [projectDir] = claudeProvider.getSessionDirs!(project);
+      const { store } = restore({ palette: 4, repeat: 0, projectDir });
+      expect(store.get(7)).toMatchObject({ directoryName: 'Proj', palette: 4 });
+    } finally {
+      removeUserDirectory(project);
+    }
   });
 });

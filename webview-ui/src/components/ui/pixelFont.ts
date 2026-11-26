@@ -24,6 +24,8 @@ export const GLYPHS: Record<string, readonly string[]> = {
   '.': ['.', '.', '.', '.', '#'],
   '/': ['..#', '..#', '.#.', '#..', '#..'],
   '#': ['.#.#.', '#####', '.#.#.', '#####', '.#.#.'],
+  // A clock time's separator ("14:05:09").
+  ':': ['.', '#', '.', '#', '.'],
   // Hex digits, upper case (a hex colour is drawn upper-cased: "#1E1E2E").
   A: ['###', '#.#', '###', '#.#', '#.#'],
   B: ['##.', '#.#', '##.', '#.#', '##.'],
@@ -77,10 +79,10 @@ export const MONTHS = [
 ] as const;
 
 /** A word drawn in glyphs: a number (signed, decimal) with its unit or %, a
- *  version, an upper-case hex colour, a month, NOW, the "--" of no data, or
- *  the "/" between two numbers. */
+ *  clock time ("14:05", "14:05:09"), a version, an upper-case hex colour, a
+ *  month, NOW, the "--" of no data, or the "/" between two numbers. */
 const NUMBER_WORD = new RegExp(
-  `^(?:[<-]?\\d+(?:\\.\\d+)?[dhmx%]?|v\\d+(?:\\.\\d+)*|#[0-9A-F]{3,8}|${MONTHS.join('|')}|${NOW}|--|/)$`,
+  `^(?:[<-]?\\d+(?:\\.\\d+)?[dhmx%]?|\\d{1,2}:\\d{2}(?::\\d{2})?|v\\d+(?:\\.\\d+)*|#[0-9A-F]{3,8}|${MONTHS.join('|')}|${NOW}|--|/)$`,
 );
 export const GLYPH_HEIGHT = 5;
 /** Empty columns between two glyphs. */

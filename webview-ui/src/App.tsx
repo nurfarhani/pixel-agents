@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 
 import { toMajorMinor } from './changelogData.js';
 import { CharactersView } from './characters/ui/CharactersView.js';
+import { AgentActivitySidebar } from './components/AgentActivitySidebar.js';
 import { AgentCardBar } from './components/AgentCardBar.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
@@ -581,6 +582,24 @@ function App() {
               limits={usage.limits}
               providerName={usage.status.providerName}
               mobile={isMobile}
+            />
+          )}
+
+          {/* What every agent is doing, and in which project: top-right,
+              left of the card bar (desktop only; the editor needs the room). */}
+          {!isMobile && !editor.isEditMode && (
+            <AgentActivitySidebar
+              officeState={officeState}
+              cardAgents={cardAgents}
+              agents={agents}
+              agentTools={agentTools}
+              subagentTools={subagentTools}
+              subagentCharacters={subagentCharacters}
+              focusedAgentId={focusedAgentId}
+              getAppearance={terminalDrawer.getAppearance}
+              statusFor={terminalDrawer.statusFor}
+              onOpenAgent={openAgentFromSidebar}
+              diagnosticsEnabled={!officeReadOnly}
             />
           )}
 

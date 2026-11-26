@@ -484,6 +484,13 @@ async function main(): Promise<void> {
       );
     }
 
+    // Restore the saved agents BEFORE any scanner runs: a scan that adopts a
+    // session persists the agent list, and before this ran first that write
+    // dropped every saved agent the scans don't find again (a session idle in
+    // the host's own project dir, which the global scan skips), so a restart
+    // lost it. The webviewReady restore later is a no-op for these.
+    runtime.restoreExternalAgents();
+
     // Start scanning for external sessions (Claude running in user's terminal)
     const cwd = process.cwd();
     const dirs = claudeProvider.getSessionDirs?.(cwd);

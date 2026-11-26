@@ -33,6 +33,9 @@ describe('splitLabel', () => {
     expect(splitLabel('5-hour')).toEqual([{ glyphs: false, text: '5-hour' }]);
     expect(splitLabel('73%')).toEqual([{ glyphs: true, text: '73%' }]);
     expect(splitLabel('--')).toEqual([{ glyphs: true, text: '--' }]);
+    expect(splitLabel('14:05:09')).toEqual([{ glyphs: true, text: '14:05:09' }]);
+    expect(splitLabel('9:30')).toEqual([{ glyphs: true, text: '9:30' }]);
+    expect(splitLabel('note:')).toEqual([{ glyphs: false, text: 'note:' }]);
   });
 });
 

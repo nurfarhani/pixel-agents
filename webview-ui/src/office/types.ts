@@ -73,6 +73,17 @@ export interface ToolActivity {
   status: string;
   done: boolean;
   permissionWait?: boolean;
+  /** When the office heard the tool start (ms since epoch). A reconnect's
+   *  replay re-stamps it with the replay's time. */
+  startedAt?: number;
+}
+
+/** A sub-agent's character as the React layer lists it (negative id, under its parent's tool). */
+export interface SubagentCharacter {
+  id: number;
+  parentAgentId: number;
+  parentToolId: string;
+  label: string;
 }
 
 export const EditTool = {

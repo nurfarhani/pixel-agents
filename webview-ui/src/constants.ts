@@ -765,6 +765,22 @@ export const CONVERSATION_SEARCH_PREFETCH_PX = 120;
 export const CONVERSATION_EXPANDED_KEY = 'pixel-agents.conversationExpandedDirectories';
 /** localStorage key: whether this viewer shut the desktop conversation sidebar. */
 export const CONVERSATION_SIDEBAR_SHUT_KEY = 'pixel-agents.conversationSidebarShut';
+
+// -- Agent activity sidebar (desktop, top-right of the office, left of the card bar) --
+/** The sidebar's width. */
+export const AGENT_ACTIVITY_SIDEBAR_WIDTH_PX = 260;
+/** Its gap to the office's top edge and to the card bar on its right. */
+export const AGENT_ACTIVITY_SIDEBAR_GAP_PX = 8;
+/** Room left under it for the radio and the version label. */
+export const AGENT_ACTIVITY_SIDEBAR_BOTTOM_CLEARANCE_PX = 96;
+/** How often it re-reads the office's imperative state (bubbles, isActive). */
+export const AGENT_ACTIVITY_REFRESH_MS = 250;
+/** The newest tool calls of a turn it lists per agent (older ones collapse to "+N earlier"). */
+export const AGENT_ACTIVITY_TOOL_LINES = 4;
+/** How often the Debug View and the activity sidebar ask for agent diagnostics. */
+export const AGENT_DIAGNOSTICS_POLL_MS = 2000;
+/** localStorage key: whether this viewer collapsed the activity sidebar. */
+export const AGENT_ACTIVITY_SIDEBAR_SHUT_KEY = 'pixel-agents.agentActivitySidebarShut';
 /** How long a Directory's section takes to unfold or fold in the conversation list. */
 export const CONVERSATION_UNFOLD_MS = 180;
 /** An agent card's height: its mug shot plus 1px padding and 2px border each

@@ -27,6 +27,7 @@ import type * as vscode from 'vscode';
 
 const debug = process.env.PIXEL_AGENTS_DEBUG !== '0';
 
+import type { Directory } from '../../core/src/messages.js';
 import type { HookProvider } from '../../core/src/provider.js';
 import type { TeamProvider } from '../../core/src/teamProvider.js';
 import type { ITerminalAdapter } from '../../core/src/terminalAdapter.js';
@@ -44,6 +45,7 @@ import {
   PROJECT_SCAN_INTERVAL_MS,
 } from './constants.js';
 import { clearContextUsage, seedContextUsage } from './contextUsage.js';
+import { directoryOfSession } from './directories.js';
 import type { DismissalTracker } from './dismissalTracker.js';
 import { assignPaletteIfNeeded } from './paletteAssigner.js';
 import { pathsMatch } from './pathKey.js';
@@ -609,6 +611,36 @@ export function setDirectoryNameResolver(resolver: DirectoryNameResolver): void 
   directoryNameResolver = resolver;
 }
 
+/** The user's saved Directory an external session runs in (directoryOfSession,
+ *  with the active provider's rule for where it files a Directory's sessions).
+ *  Wins over the host resolver: it is the name the user gave the project. */
+function savedDirectoryOf(session: { cwd?: string; projectDir?: string }): Directory | undefined {
+  const provider = getHookProvider();
+  return directoryOfSession(session, (directoryPath) =>
+    provider?.getSessionDirs ? provider.getSessionDirs(directoryPath) : [],
+  );
+}
+
+/**
+ * An adopted agent being restored follows its saved Directory as a fresh
+ * adoption would: the Directory's name, and its default character unless it
+ * already wears one of them. Agents saved before they could be matched (or
+ * before the Directory was saved, or its defaults changed) catch up on the
+ * next start. A follower (teammate) copies its lead's look, so it is left alone.
+ */
+export function followSavedDirectory(agent: AgentState, store: AgentStateStore): void {
+  if (agent.leadAgentId !== undefined) return;
+  const directory = savedDirectoryOf({ projectDir: agent.projectDir });
+  if (!directory) return;
+  agent.directoryName = directory.name;
+  const defaults = directory.characters ?? [];
+  if (defaults.length === 0) return;
+  if (agent.palette !== undefined && defaults.includes(agent.palette)) return;
+  agent.palette = undefined;
+  agent.repeat = undefined;
+  assignPaletteIfNeeded(agent, store, { directory });
+}
+
 /**
  * Scan the provider's teammate transcripts for a given lead session.
  * Each teammate gets its own independent agent (positive ID) with file watching.
@@ -1052,9 +1084,11 @@ export function adoptExternalSessionFromHook(
 
     knownJsonlFiles.add(transcriptPath);
     const projectDir = path.dirname(transcriptPath);
+    // The hook names the cwd, so its folder name beats decoding Claude's lossy
+    // project-dir hash (which turns `pixel-agents` into `agents`).
     const directoryName =
       directoryNameResolver?.({ cwd, projectDir }) ??
-      directoryNameFromProjectDir(path.basename(projectDir));
+      (cwd ? path.basename(cwd) : directoryNameFromProjectDir(path.basename(projectDir)));
 
     adoptExternalSession(
       transcriptPath,
@@ -1066,7 +1100,7 @@ export function adoptExternalSessionFromHook(
       waitingTimers,
       permissionTimers,
       persistAgents,
-      directoryName,
+      { cwd, fallbackName: directoryName },
     );
 
     const adoptedAgent = [...agents.values()].find((a) => pathsMatch(a.jsonlFile, transcriptPath));
@@ -1083,8 +1117,9 @@ export function adoptExternalSessionFromHook(
   } else {
     // Hooks-only provider (OpenCode, Copilot): no transcript file, all state from hooks
     const id = nextAgentIdRef.current++;
+    const directory = savedDirectoryOf({ cwd });
     const directoryName =
-      directoryNameResolver?.({ cwd }) ?? (cwd ? path.basename(cwd) : undefined);
+      directory?.name ?? directoryNameResolver?.({ cwd }) ?? (cwd ? path.basename(cwd) : undefined);
     const agent = createAgentState({
       id,
       sessionId,
@@ -1096,7 +1131,7 @@ export function adoptExternalSessionFromHook(
       lastDataAt: Date.now(),
       directoryName,
     });
-    assignPaletteIfNeeded(agent, agents);
+    assignPaletteIfNeeded(agent, agents, { directory });
     agents.set(id, agent);
     persistAgents();
     if (debug) {
@@ -1154,10 +1189,13 @@ function adoptExternalSession(
   permissionTimers: Map<number, ReturnType<typeof setTimeout>>,
 
   persistAgents: () => void,
-  directoryName?: string,
+  origin: { cwd?: string; fallbackName?: string } = {},
 ): void {
   const id = nextAgentIdRef.current++;
   const fileOffset = initialReadOffset(jsonlFile);
+  // A session in one of the user's Directories is labelled and dressed as if
+  // it had been launched there: the Directory's name, its default character.
+  const directory = savedDirectoryOf({ cwd: origin.cwd, projectDir });
   const agent = createAgentState({
     id,
     sessionId: path.basename(jsonlFile, '.jsonl'),
@@ -1166,10 +1204,10 @@ function adoptExternalSession(
     jsonlFile,
     fileOffset,
     lastDataAt: Date.now(),
-    directoryName,
+    directoryName: directory?.name ?? origin.fallbackName,
   });
 
-  assignPaletteIfNeeded(agent, agents);
+  assignPaletteIfNeeded(agent, agents, { directory });
   agents.set(id, agent);
   persistAgents();
 
@@ -1494,7 +1532,7 @@ function scanGlobalProjectDirs(
         waitingTimers,
         permissionTimers,
         persistAgents,
-        directoryName,
+        { fallbackName: directoryName },
       );
     }
   }

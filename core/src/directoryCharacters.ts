@@ -31,24 +31,34 @@ export function parseCharacterOrder(raw: unknown): DirectoryCharacterOrder {
 }
 
 /**
- * The character a launch into a Directory wears, or undefined to leave it to
- * the server's own random pick (pickRandomPalette: a character no one in the
- * office wears, preferably no Directory's default).
+ * The character an agent in a Directory wears, or undefined to leave it to the
+ * server's own random pick (pickRandomPalette) when the Directory has no
+ * default left in the cast.
  *
- * - `priority`: the first default no agent in the office wears.
- * - `random`: a random default no agent wears.
+ * The defaults with the fewest copies in the office (`worn`: palette → copies)
+ * are the candidates, so one no agent wears comes first, and once every
+ * default is in the office the project's character is worn again — as its next
+ * repeat, in the next clothes colour (repeatFor) — rather than a stranger's:
+ * every agent in a project looks like the project, the copies spread evenly.
  *
- * Either way a default already in the office is never repeated: all worn →
- * undefined. Defaults past `paletteCount` (a deleted character) are skipped.
+ * - `priority`: the first candidate in the Directory's order.
+ * - `random`: a random candidate.
+ *
+ * Defaults past `paletteCount` (a deleted character) are skipped.
  */
 export function pickDirectoryCharacter(
   characters: readonly number[],
   order: DirectoryCharacterOrder,
   paletteCount: number,
-  worn: ReadonlySet<number>,
+  worn: ReadonlyMap<number, number>,
   random: () => number = Math.random,
 ): number | undefined {
-  const free = characters.filter((c) => c < paletteCount && !worn.has(c));
-  if (free.length === 0) return undefined;
-  return order === 'priority' ? free[0] : free[Math.floor(random() * free.length)];
+  const valid = characters.filter((c) => c < paletteCount);
+  if (valid.length === 0) return undefined;
+  const copies = (c: number) => worn.get(c) ?? 0;
+  const fewest = Math.min(...valid.map(copies));
+  const candidates = valid.filter((c) => copies(c) === fewest);
+  return order === 'priority'
+    ? candidates[0]
+    : candidates[Math.floor(random() * candidates.length)];
 }

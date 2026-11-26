@@ -90,20 +90,24 @@ export function rosterPick(raw: unknown, paletteCount: number): number | undefin
 
 /**
  * A new agent's look, first match wins: the roster pick, else one of the
- * launch Directory's defaults no one wears, else a random pick. Whichever it
- * is, an agent wearing a character already in the office is its next repeat.
+ * Directory's defaults (the least worn, so an unworn one first and the
+ * project's character again once all are in the office), else a random pick.
+ * Whichever it is, an agent wearing a character already in the office is its
+ * next repeat.
  */
 export function chooseLook(request: LookRequest): Look {
   const { paletteCount, worn, directory, random = Math.random } = request;
-  const wornPalettes = new Set<number>();
-  for (const look of worn) if (look.palette !== undefined) wornPalettes.add(look.palette);
+  const copies = new Map<number, number>();
+  for (const look of worn) {
+    if (look.palette !== undefined) copies.set(look.palette, (copies.get(look.palette) ?? 0) + 1);
+  }
   const palette =
     rosterPick(request.picked, paletteCount) ??
     pickDirectoryCharacter(
       directory?.characters ?? [],
       directory?.characterOrder ?? 'priority',
       paletteCount,
-      wornPalettes,
+      copies,
       random,
     ) ??
     pickRandomPalette(paletteCount, worn, random, request.reserved);
